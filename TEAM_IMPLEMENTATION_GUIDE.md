@@ -28,33 +28,53 @@ This workflow enables you and your fellow developer to:
 | **Efficient builds** | XcodeBuildMCP handles all Xcode operations without leaving Claude |
 | **Clear task ownership** | Task files track who's working on what |
 
-### The Core Methodology
+### The Core Methodology (Separate Features)
+
+Since you're each working on **different features**, the workflow looks like this:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      PRD-DRIVEN WORKFLOW                        │
+│                 PARALLEL FEATURE DEVELOPMENT                    │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   1. PRD.md ──────► 2. Feature Specs ──────► 3. Task Files     │
-│   (What to build)    (How to build)          (Step-by-step)    │
+│   DEVELOPER A                         DEVELOPER B               │
+│   ───────────                         ───────────               │
+│   Feature: User Profile               Feature: Settings         │
 │                                                                 │
-│                            │                                    │
-│                            ▼                                    │
+│   1. Create spec ◄────────────────────► 1. Create spec          │
+│      docs/specs/profile.md               docs/specs/settings.md │
 │                                                                 │
-│   Developer A: Works on Task 1-3    Developer B: Works on 4-6  │
-│   ──────────────────────────────    ────────────────────────── │
-│   Claude assists with:              Claude assists with:        │
-│   • Code generation                 • Code generation           │
-│   • Building/testing                • Building/testing          │
-│   • Debugging                       • Debugging                 │
+│   2. Create tasks ◄───────────────────► 2. Create tasks         │
+│      docs/tasks/profile-tasks.md         docs/tasks/settings.md │
 │                                                                 │
-│                            │                                    │
-│                            ▼                                    │
+│   3. Implement ◄──────────────────────► 3. Implement            │
+│      Features/Profile/                   Features/Settings/     │
 │                                                                 │
-│   4. Merge ──────► 5. Integration Tests ──────► 6. Ship        │
+│   4. Build & Test ◄───────────────────► 4. Build & Test         │
+│                                                                 │
+│                    ┌─────────────┐                              │
+│                    │ SHARED CODE │ ◄── Coordination needed!     │
+│                    │  Core/      │                              │
+│                    │  Services/  │                              │
+│                    │  Utils/     │                              │
+│                    └─────────────┘                              │
+│                           │                                     │
+│                           ▼                                     │
+│   5. PR + Review ◄────────────────────► 5. PR + Review          │
+│                                                                 │
+│                    ┌─────────────┐                              │
+│                    │   MERGE     │                              │
+│                    │ Integration │                              │
+│                    │   Tests     │                              │
+│                    └─────────────┘                              │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Key insight**: When working on separate features, you have full ownership of your feature directory. The main coordination points are:
+1. **Shared code** (Core/, Services/, Extensions/)
+2. **Architectural decisions** that affect both features
+3. **Integration** when features need to interact
 
 ---
 
@@ -399,179 +419,259 @@ Press `Shift+Tab` to cycle through modes:
 
 ---
 
-## Collaboration Best Practices
+## Collaboration Best Practices (Separate Features)
 
-### 1. Use Task Files to Divide Work
+### 1. Each Developer Owns Their Feature Entirely
 
-Create `docs/tasks/[feature]-tasks.md` with clear ownership:
+Since you're working on separate features, each developer creates their **own** spec and task file:
+
+**Developer A creates:**
+- `docs/specs/user-profile.md`
+- `docs/tasks/user-profile-tasks.md`
+- Works in `Features/Profile/`
+
+**Developer B creates:**
+- `docs/specs/settings.md`
+- `docs/tasks/settings-tasks.md`
+- Works in `Features/Settings/`
+
+### 2. Track Active Features in CLAUDE.md
+
+Add a section to your shared `CLAUDE.md` so Claude knows who's working where:
 
 ```markdown
-# Tasks: User Authentication
+## Active Development
 
-## Progress
-- Completed: 0/6
-- Developer A: Steps 1-3
-- Developer B: Steps 4-6
+### Developer A: User Profile Feature
+- **Branch**: `feature/user-profile`
+- **Directory**: `Features/Profile/`
+- **Spec**: `docs/specs/user-profile.md`
+- **Status**: In Progress
 
-## Steps
+### Developer B: Settings Feature
+- **Branch**: `feature/settings`
+- **Directory**: `Features/Settings/`
+- **Spec**: `docs/specs/settings.md`
+- **Status**: In Progress
 
-### Step 1: Create AuthService [Developer A]
-- [x] Create AuthService protocol
-- [x] Implement mock AuthService for testing
-- [ ] Implement real AuthService with API calls
-**Status**: In Progress
-
-### Step 2: Create LoginViewModel [Developer A]
-- [ ] Create @Observable LoginViewModel
-- [ ] Add validation logic
-- [ ] Write unit tests
-**Status**: Not Started
-
-### Step 3: Create LoginView [Developer A]
-- [ ] Create SwiftUI LoginView
-- [ ] Connect to LoginViewModel
-- [ ] Add error handling UI
-**Status**: Not Started
-
-### Step 4: Create SignupViewModel [Developer B]
-- [ ] ...
-**Status**: Not Started
-
-[Continue...]
+## Off-Limits Directories
+- Developer A: DO NOT modify `Features/Settings/`
+- Developer B: DO NOT modify `Features/Profile/`
 ```
 
-### 2. Branch Strategy
+### 3. Branch Strategy for Separate Features
 
 ```bash
-# Feature branches for each developer
-git checkout -b feature/auth-login-developer-a
-git checkout -b feature/auth-signup-developer-b
+# Each developer has their own feature branch
+git checkout -b feature/user-profile    # Developer A
+git checkout -b feature/settings        # Developer B
 
-# Merge to develop regularly
+# Both branch from and merge to develop
 git checkout develop
-git merge feature/auth-login-developer-a
+git pull
+git checkout -b feature/your-feature
 ```
 
-### 3. Communication Points
+### 4. Coordinate on Shared Code
 
-Tell Claude about your teammate:
+The **critical coordination point** is shared code. Before modifying:
 
-```
-You: "I'm Developer A. Developer B is working on the signup flow in
-     Features/Signup/. Don't modify any files there."
-```
+| Directory | Action Required |
+|-----------|-----------------|
+| `Core/` | Discuss with teammate first |
+| `Services/` | Check if teammate is using it |
+| `Extensions/` | Notify teammate of additions |
+| `Models/` | Coordinate on shared models |
+| `Networking/` | Agree on API changes |
 
-### 4. Sync Points
-
-Establish sync points in your workflow:
-
-```
-Morning Sync:
-├── Both developers pull latest
-├── Review task file for conflicts
-└── Assign tasks for the day
-
-Mid-day Check:
-├── Push completed work
-├── Pull partner's changes
-└── Resolve any integration issues
-
-End of Day:
-├── Commit all work in progress
-├── Update task file with status
-└── Push to feature branch
-```
-
-### 5. Shared Context Updates
-
-When you make architectural decisions, update the shared docs:
+**Example communication:**
 
 ```
-You: "Update CLAUDE.md to note that we're using Keychain for
-     credential storage, not UserDefaults"
-
-Claude: [Updates CLAUDE.md]
+Slack/Message to teammate:
+"I need to add a `UserService` to Core/Services/ for my Profile feature.
+Are you using or planning to create anything similar for Settings?"
 ```
 
-This ensures both developers' Claude sessions know about the decision.
+### 5. Sync Points for Separate Features
+
+```
+Weekly Planning:
+├── Discuss upcoming features
+├── Identify potential shared code needs
+└── Update CLAUDE.md with active features
+
+Daily (Optional):
+├── Quick check on shared code changes
+├── Pull from develop to stay current
+└── Flag any blocking issues
+
+Before PR:
+├── Pull latest develop
+├── Run full test suite
+├── Check for conflicts in shared code
+└── Review impact on teammate's feature
+```
+
+### 6. Shared Context Updates
+
+When you add shared code that your teammate might use:
+
+```
+You: "I added a new ImagePickerService in Core/Services/. Update
+     CLAUDE.md to document this so my teammate's Claude knows about it."
+
+Claude: [Updates CLAUDE.md with new service documentation]
+```
+
+**Commit the CLAUDE.md update** so your teammate's Claude session picks it up.
 
 ---
 
-## Critical Things to Watch Out For
+## Critical Things to Watch Out For (Separate Features)
 
-### 1. Merge Conflicts in Generated Code
+### 1. Shared Code Conflicts (THE #1 ISSUE)
 
-**Problem**: Both developers' Claude sessions might generate similar code differently.
+**Problem**: Both developers modify files in `Core/`, `Services/`, or `Extensions/` and create merge conflicts.
+
+**Example**:
+- Developer A adds `validateEmail()` to `Core/Extensions/String+Validation.swift`
+- Developer B adds `validatePhone()` to the same file
+- Merge conflict when both merge to develop
 
 **Solution**:
-- Divide features into non-overlapping modules
-- Use task files to assign clear ownership
-- Pull frequently and resolve conflicts early
+- **Communicate before touching shared code** - a quick message saves hours
+- Pull from develop frequently (daily minimum)
+- Consider creating feature-specific services first, then extract shared code later
 
-### 2. Inconsistent Code Style
+```
+You: "Before adding to Core/Extensions, check if my teammate has
+     pending changes there. Run: git fetch && git diff origin/develop -- Core/"
 
-**Problem**: Without alignment, Claude might generate code in different styles.
+Claude: [Checks for teammate's pending changes]
+```
 
-**Solution**: Be specific in `CLAUDE.md`:
+### 2. Duplicate Code (Both Create Similar Utilities)
+
+**Problem**: Without coordination, both developers create similar utilities independently.
+
+**Example**:
+- Developer A creates `ProfileImageLoader` in their feature
+- Developer B creates `SettingsImageLoader` with nearly identical code
+
+**Solution**:
+- Review shared code needs during weekly planning
+- Before creating a utility, search the codebase first:
+
+```
+You: "Before creating an image loading utility, search the codebase
+     for existing image loading code"
+
+Claude: [Searches and finds existing or similar utilities]
+```
+
+- Add new shared utilities to `CLAUDE.md` immediately
+
+### 3. Architectural Drift
+
+**Problem**: Each developer's Claude makes different architectural decisions, leading to inconsistent patterns.
+
+**Example**:
+- Developer A's Claude uses `@Observable` with dependency injection
+- Developer B's Claude uses `@ObservableObject` with singletons
+
+**Solution**: Be very specific in `CLAUDE.md` about architecture:
 
 ```markdown
-## Code Style Requirements
-- Indent: 4 spaces (NOT tabs)
-- Braces: Same line for functions
-- Max line length: 120 characters
-- Always use explicit `self` in closures
-- Name booleans with `is`/`has`/`should` prefix
+## Architecture Requirements (MUST FOLLOW)
+- ViewModels: ALWAYS use @Observable, NEVER @ObservableObject
+- Dependencies: ALWAYS inject via init, NEVER use singletons
+- Navigation: ALWAYS use NavigationStack with typed routes
+- Networking: ALWAYS use the shared NetworkClient in Core/
+- Error Handling: ALWAYS use the AppError enum from Core/
 ```
 
-### 3. Context Drift
+### 4. Integration Surprises
 
-**Problem**: Long Claude sessions can lose track of earlier decisions.
+**Problem**: Features work in isolation but break when merged together.
+
+**Example**:
+- Profile feature uses UserModel with `name: String`
+- Settings feature expects UserModel with `displayName: String`
+- App crashes when both features access the same user
 
 **Solution**:
-- Use `/compact` regularly to summarize context
-- Use `/clear` between unrelated tasks
-- Keep `CLAUDE.md` updated with key decisions
-- Start fresh sessions for new features
+- Share data models early - put them in `Core/Models/`
+- Write integration tests that use multiple features
+- Test on develop branch before final merge
 
 ```
-You: "/compact"
-Claude: [Summarizes conversation, reduces context]
+You: "Check if my UserModel is compatible with what exists in Core/Models/"
 
-You: "/clear"
-Claude: [Clears context, starts fresh]
+Claude: [Compares and flags differences]
 ```
 
-### 4. Accidentally Modifying Partner's Code
+### 5. Stale CLAUDE.md
 
-**Problem**: Claude might edit files your partner is working on.
+**Problem**: Your teammate adds shared code but doesn't update `CLAUDE.md`. Your Claude doesn't know about it and creates duplicates.
 
-**Solution**: Add to your session:
+**Solution**:
+- Make updating `CLAUDE.md` part of the shared code workflow
+- Pull before starting each session
+- Ask Claude to check for recent changes:
 
 ```
-You: "DO NOT modify any files in Features/Signup/ - my partner is
-     working there. Only work in Features/Login/"
+You: "What files in Core/ have been modified recently?
+     Are there new utilities I should know about?"
+
+Claude: [Checks git log for Core/ changes]
 ```
 
-Or use permissions in `.claude/settings.json`:
+### 6. Accidentally Modifying Partner's Feature Directory
+
+**Problem**: Claude edits files in your teammate's feature directory.
+
+**Solution**: Use permissions in `.claude/settings.local.json`:
 
 ```json
 {
   "permissions": {
     "deny": [
-      "Write(Features/Signup/*)",
-      "Edit(Features/Signup/*)"
+      "Write(Features/Settings/*)",
+      "Edit(Features/Settings/*)"
     ]
   }
 }
 ```
 
-### 5. Different XcodeBuildMCP Versions
+**Note**: Each developer sets this in their **local** settings to protect their teammate's directory.
 
-**Problem**: Different MCP versions might behave differently.
+### 7. Different Code Styles
 
-**Solution**: Pin the version in `.mcp.json`:
+**Problem**: Each developer's Claude generates code with slightly different styles.
+
+**Solution**: Be extremely specific in `CLAUDE.md`:
+
+```markdown
+## Code Style Requirements (MANDATORY)
+- Indent: 4 spaces (NOT tabs)
+- Braces: Same line for functions and closures
+- Max line length: 120 characters
+- Trailing commas: Always in multi-line collections
+- Self: Explicit in closures, implicit elsewhere
+- Naming:
+  - Booleans: `is`/`has`/`should` prefix
+  - Arrays: Plural nouns (items, users)
+  - Optionals: No special prefix
+```
+
+### 8. Version Mismatches
+
+**Problem**: Different XcodeBuildMCP or Claude Code versions cause different behavior.
+
+**Solution**: Pin versions and check them:
 
 ```json
+// .mcp.json - pin XcodeBuildMCP version
 {
   "mcpServers": {
     "XcodeBuildMCP": {
@@ -582,11 +682,16 @@ Or use permissions in `.claude/settings.json`:
 }
 ```
 
-### 6. Secrets in Code
+```bash
+# Both developers should run same Claude Code version
+claude --version
+```
 
-**Problem**: Claude might accidentally expose or commit secrets.
+### 9. Secrets Exposure
 
-**Solution**: Always deny access to sensitive files:
+**Problem**: Claude might accidentally read or commit secrets.
+
+**Solution**: Always deny in team settings:
 
 ```json
 {
@@ -602,364 +707,387 @@ Or use permissions in `.claude/settings.json`:
 }
 ```
 
-### 7. Breaking Changes Without Communication
+---
 
-**Problem**: One developer's changes break another's code.
+## Complete Example: Two Developers, Two Features
 
-**Solution**:
-- Update `docs/ARCHITECTURE.md` when making breaking changes
-- Add notes to task files
-- Use feature flags for in-progress work
+Let's walk through a realistic scenario where:
+- **Developer A** works on **User Profile** feature
+- **Developer B** works on **App Settings** feature
+
+Both features need shared code, which is where coordination happens.
 
 ---
 
-## Complete Feature Implementation Example
+### Week Start: Planning Session (Both Developers)
 
-Let's walk through implementing a **"User Profile"** feature as a 2-developer team.
-
-### Phase 1: Planning (Developer A Leads)
-
-**Developer A starts Claude in Plan Mode:**
-
-```bash
-claude --permission-mode plan
-```
-
-**Developer A's Session:**
+Before coding, have a quick sync to identify shared code needs:
 
 ```
-You: "Ultrathink about implementing a User Profile feature for our app.
-     Users need to:
-     - View their profile information
-     - Edit their name and avatar
-     - Change notification preferences
-
-     Read our codebase structure first, then create a comprehensive plan."
-
-Claude: [Extended thinking... analyzes codebase]
-        [Creates detailed implementation plan]
-        [Identifies dependencies]
-
-You: "Create a feature spec at docs/specs/user-profile.md"
-
-Claude: [Creates comprehensive spec]
+Discussion:
+├── Developer A: "Profile needs to fetch/update user data"
+├── Developer B: "Settings needs to update user preferences"
+├── Shared need identified: Both need UserService in Core/
+└── Decision: Developer A creates UserService, Developer B uses it
 ```
 
-**The spec Claude creates (`docs/specs/user-profile.md`):**
+**Update CLAUDE.md together:**
 
 ```markdown
-# Feature Specification: User Profile
+## Active Development
 
-**Status**: Approved
-**Priority**: P1
-**Author**: Developer A
-**Last Updated**: 2026-01-19
+### Developer A: User Profile Feature
+- **Branch**: `feature/user-profile`
+- **Directory**: `Features/Profile/`
+- **Shared Code Responsibility**: Creating UserService in Core/Services/
 
-## Overview
-Allow users to view and edit their profile information.
+### Developer B: App Settings Feature
+- **Branch**: `feature/settings`
+- **Directory**: `Features/Settings/`
+- **Depends On**: UserService from Developer A
 
-## User Stories
-1. As a user, I want to view my profile so I can see my account info
-2. As a user, I want to edit my name so I can correct mistakes
-3. As a user, I want to change my avatar so I can personalize my account
-4. As a user, I want to manage notifications so I control what alerts I get
-
-## Acceptance Criteria
-- [ ] Profile screen displays name, email, avatar
-- [ ] Name can be edited with validation (2-50 chars)
-- [ ] Avatar can be selected from library or camera
-- [ ] Notification toggles persist and affect push behavior
-- [ ] All changes sync to backend
-- [ ] Offline support with sync on reconnect
-
-## Technical Design
-
-### Data Models
-```swift
-struct UserProfile: Codable, Identifiable {
-    let id: UUID
-    var name: String
-    var email: String
-    var avatarURL: URL?
-    var notificationPreferences: NotificationPreferences
-}
-
-struct NotificationPreferences: Codable {
-    var pushEnabled: Bool
-    var emailEnabled: Bool
-    var weeklyDigest: Bool
-}
+## Off-Limits
+- Developer A: DO NOT modify Features/Settings/
+- Developer B: DO NOT modify Features/Profile/
 ```
 
-### Architecture
-- ProfileViewModel (@Observable) manages state
-- ProfileService protocol for API calls
-- Uses existing NetworkClient from Core/Networking
+---
 
-## Dependencies
-- Core/Networking module
-- Core/ImagePicker utility
-- SwiftData for offline cache
+### Developer A's Workflow (User Profile)
+
+**Day 1: Create spec and start feature**
+
+```bash
+git checkout -b feature/user-profile
+claude
 ```
 
-**Developer A then creates tasks:**
+**Session:**
 
 ```
-You: "Create a task breakdown at docs/tasks/user-profile-tasks.md.
-     Split tasks between two developers - assign UI work to Developer A
-     and backend/data work to Developer B."
+You: "I'm Developer A working on the User Profile feature. My teammate
+     (Developer B) is working on Settings in Features/Settings/ - don't
+     touch that directory.
 
-Claude: [Creates task file]
+     First, ultrathink and create a spec for User Profile at
+     docs/specs/user-profile.md"
+
+Claude: [Extended thinking...]
+        [Creates comprehensive spec]
+
+You: "Now create a task breakdown at docs/tasks/user-profile-tasks.md"
+
+Claude: [Creates task file with 6 steps]
 ```
 
-**The task file Claude creates (`docs/tasks/user-profile-tasks.md`):**
+**Developer A's Task File (`docs/tasks/user-profile-tasks.md`):**
 
 ```markdown
 # Tasks: User Profile
 
-**Feature Spec**: docs/specs/user-profile.md
-**Status**: In Progress
+**Owner**: Developer A
+**Branch**: feature/user-profile
+**Spec**: docs/specs/user-profile.md
 
-## Progress Summary
-- Total Steps: 8
-- Completed: 0
-- Developer A (UI): Steps 1, 2, 5, 7
-- Developer B (Data): Steps 3, 4, 6, 8
+## Progress: 0/6 Complete
 
----
-
-## Developer A Tasks (UI)
-
-### Step 1: Create ProfileView skeleton [Developer A]
-- [ ] Create Features/Profile/ directory structure
-- [ ] Create ProfileView.swift with basic layout
-- [ ] Add placeholder content
-- [ ] Add to navigation
+### Step 1: Create UserService in Core/ (SHARED)
+- [ ] Create Core/Services/UserService.swift protocol
+- [ ] Create Core/Services/UserAPIService.swift implementation
+- [ ] Add to CLAUDE.md shared code documentation
+- [ ] Notify Developer B that UserService is available
 **Status**: Not Started
-**Estimated**: Small
+**Note**: Developer B's Settings feature will use this too
 
-### Step 2: Create ProfileViewModel [Developer A]
-- [ ] Create ProfileViewModel.swift as @Observable
-- [ ] Add published properties for profile data
-- [ ] Add validation methods
-- [ ] Write unit tests for validation
-**Status**: Not Started
-**Estimated**: Medium
-**Depends on**: Step 3 (ProfileService protocol)
-
-### Step 5: Implement ProfileView UI [Developer A]
-- [ ] Build complete profile display UI
-- [ ] Add edit mode toggle
-- [ ] Implement form validation feedback
-- [ ] Add avatar picker integration
-**Status**: Not Started
-**Estimated**: Large
-**Depends on**: Steps 2, 4
-
-### Step 7: Add notification preferences UI [Developer A]
-- [ ] Create NotificationPreferencesView
-- [ ] Add toggle controls
-- [ ] Connect to ViewModel
-**Status**: Not Started
-**Estimated**: Small
-
----
-
-## Developer B Tasks (Data/Backend)
-
-### Step 3: Create ProfileService [Developer B]
-- [ ] Create ProfileService protocol
-- [ ] Create MockProfileService for testing
-- [ ] Create ProfileAPIService implementation
+### Step 2: Create ProfileViewModel
+- [ ] Create Features/Profile/ViewModels/ProfileViewModel.swift
+- [ ] Use UserService for data fetching
+- [ ] Add validation logic
 - [ ] Write unit tests
 **Status**: Not Started
-**Estimated**: Medium
 
-### Step 4: Implement API integration [Developer B]
-- [ ] Add profile endpoints to NetworkClient
-- [ ] Implement fetch profile
-- [ ] Implement update profile
-- [ ] Add error handling
+### Step 3: Create ProfileView
+- [ ] Create Features/Profile/Views/ProfileView.swift
+- [ ] Display user info
+- [ ] Add edit functionality
 **Status**: Not Started
-**Estimated**: Medium
 
-### Step 6: Add offline support [Developer B]
-- [ ] Create SwiftData model for profile cache
-- [ ] Implement cache-first loading
-- [ ] Add sync on reconnect
-- [ ] Write integration tests
+### Step 4: Add avatar editing
+- [ ] Create ImagePicker integration
+- [ ] Handle image upload
 **Status**: Not Started
-**Estimated**: Large
 
-### Step 8: Integration testing [Both]
-- [ ] Full feature integration test
-- [ ] Edge case testing
-- [ ] Performance testing
+### Step 5: Write tests
+- [ ] Unit tests for ViewModel
+- [ ] Integration tests
 **Status**: Not Started
-**Estimated**: Medium
+
+### Step 6: Final review and PR
+- [ ] Review against spec
+- [ ] Create PR
+**Status**: Not Started
+```
+
+**Implementing Step 1 (Shared Code):**
+
+```
+You: "Implement Step 1. This UserService will be used by both my
+     Profile feature and Developer B's Settings feature. Make it
+     general enough for both use cases."
+
+Claude: [Creates Core/Services/UserService.swift]
+        [Creates Core/Services/UserAPIService.swift]
+        [Creates Core/Services/MockUserService.swift]
+        [Creates UserServiceTests.swift]
+
+You: "Update CLAUDE.md to document this new shared service"
+
+Claude: [Updates CLAUDE.md with UserService documentation]
+
+You: "Commit and push so Developer B can use it"
+
+Claude: [Commits: "Add UserService to Core/ for user data management"]
+        [Pushes to feature/user-profile]
+```
+
+**Message to Developer B:**
+> "Hey, I pushed UserService to my branch. It has fetchUser(), updateUser(),
+> and updatePreferences(). You can cherry-pick it or I can merge to develop."
 
 ---
 
-## Changes Log
-| Date | Step | Developer | Changes |
-|------|------|-----------|---------|
-| 2026-01-19 | - | A | Initial task breakdown created |
-```
+### Developer B's Workflow (Settings) - Running in Parallel
 
-**Developer A commits and pushes:**
-
-```
-You: "Commit the spec and task files"
-
-Claude: [Commits: "Add User Profile feature spec and task breakdown"]
-
-You: "Push to the feature branch"
-
-Claude: [Pushes to feature/user-profile]
-```
-
-### Phase 2: Parallel Development
-
-**Developer B pulls and starts their work:**
+**Day 1: Create spec and start feature**
 
 ```bash
-git pull
-git checkout feature/user-profile
+git checkout -b feature/settings
 claude
 ```
 
-**Developer B's Session:**
+**Session:**
 
 ```
-You: "I'm Developer B. Read the user profile task file and start on
-     Step 3: Create ProfileService."
+You: "I'm Developer B working on the App Settings feature. My teammate
+     (Developer A) is working on Profile in Features/Profile/ - don't
+     touch that directory.
 
-Claude: [Reads docs/tasks/user-profile-tasks.md]
-        "I'll create the ProfileService. Let me start with the protocol
-         and mock implementation for testing."
+     Developer A is creating a UserService in Core/Services/ that I'll
+     use for user preferences.
 
-        [Creates Features/Profile/Services/ProfileService.swift]
-        [Creates Features/Profile/Services/MockProfileService.swift]
-        [Creates Features/Profile/Services/ProfileAPIService.swift]
-        [Creates ProfileServiceTests.swift]
+     Create a spec for Settings at docs/specs/settings.md"
 
-You: "/build"
+Claude: [Creates spec, noting dependency on UserService]
 
-Claude: [Builds successfully]
+You: "Create tasks at docs/tasks/settings-tasks.md. Note that Step 1
+     depends on Developer A's UserService."
 
-You: "/test"
-
-Claude: [Runs tests - all pass]
-
-You: "Update the task file to mark Step 3 complete"
-
-Claude: [Updates docs/tasks/user-profile-tasks.md]
-        Changed Step 3 status to Complete
-        Added to Changes Log
+Claude: [Creates task file]
 ```
 
-**Meanwhile, Developer A works on Step 1:**
-
-```
-You: "I'm Developer A. Read the task file and start Step 1."
-
-Claude: [Reads task file]
-        "I'll create the ProfileView skeleton. First, let me create
-         the directory structure."
-
-        [Creates Features/Profile/Views/ProfileView.swift]
-        [Creates Features/Profile/ViewModels/]
-        [Adds to app navigation]
-
-You: "/build"
-
-Claude: [Builds successfully]
-```
-
-### Phase 3: Dependent Tasks
-
-**Developer A needs to wait for Developer B's work:**
-
-```
-You: "Can I start Step 2? It depends on Step 3."
-
-Claude: [Reads task file]
-        "Step 3 is now marked complete by Developer B. You can proceed
-         with Step 2: Create ProfileViewModel."
-```
-
-**Developer A pulls Developer B's changes:**
-
-```
-You: "Pull latest changes first"
-
-Claude: [Runs git pull]
-        "Pulled Developer B's ProfileService implementation. No conflicts."
-
-You: "Now implement Step 2"
-
-Claude: [Creates ProfileViewModel using the ProfileService protocol]
-        [Creates ProfileViewModelTests.swift]
-```
-
-### Phase 4: Integration
-
-**Both developers sync up for Step 8:**
+**Developer B's Task File (`docs/tasks/settings-tasks.md`):**
 
 ```markdown
-# In docs/tasks/user-profile-tasks.md
+# Tasks: App Settings
 
-### Step 8: Integration testing [Both]
-- [x] Full feature integration test
-- [x] Edge case testing
-- [x] Performance testing
-**Status**: Complete
-**Notes**:
-  - Developer A wrote UI integration tests
-  - Developer B wrote API integration tests
-  - All 47 tests passing
+**Owner**: Developer B
+**Branch**: feature/settings
+**Spec**: docs/specs/settings.md
+
+## Progress: 0/5 Complete
+
+### Step 1: Create SettingsViewModel
+- [ ] Create Features/Settings/ViewModels/SettingsViewModel.swift
+- [ ] Use UserService from Core/ (created by Developer A)
+- [ ] Add preference management logic
+**Status**: Blocked - waiting for UserService
+**Depends On**: Developer A's UserService in Core/
+
+### Step 2: Create SettingsView
+- [ ] Create main settings screen
+- [ ] Add preference toggles
+- [ ] Add account section
+**Status**: Not Started
+
+### Step 3: Add notification settings
+- [ ] Create notification preferences UI
+- [ ] Integrate with system notifications
+**Status**: Not Started
+
+### Step 4: Add appearance settings
+- [ ] Theme selection (light/dark/system)
+- [ ] Font size options
+**Status**: Not Started
+
+### Step 5: Final review and PR
+- [ ] Review against spec
+- [ ] Create PR
+**Status**: Not Started
 ```
 
-### Phase 5: Final Review
-
-**Either developer can do the final review:**
+**Working on non-blocked tasks first:**
 
 ```
-You: "Use Plan Mode to review the entire User Profile feature
-     implementation before we merge."
+You: "Step 1 is blocked. Start Step 2 with a placeholder for UserService"
 
-Claude: [Switches to Plan Mode]
-        [Reviews all files in Features/Profile/]
-        [Checks test coverage]
-        [Verifies against acceptance criteria]
+Claude: [Creates SettingsView with mock data]
+        [Creates Features/Settings/Views/SettingsView.swift]
+        [Adds to navigation]
 
-        "Review complete:
-         ✅ All acceptance criteria met
-         ✅ 47 tests passing (92% coverage)
-         ✅ No SwiftLint warnings
-         ✅ Follows project architecture
+You: "/build"
 
-         Recommendations:
-         - Add accessibility labels to avatar picker
-         - Consider adding loading state to save button"
-
-You: "Implement those recommendations"
-
-Claude: [Switches to Normal Mode]
-        [Adds accessibility labels]
-        [Adds loading state]
+Claude: [Builds successfully]
 ```
 
-### Phase 6: Merge to Main
+**Day 2: Developer A's UserService is ready**
 
 ```
-You: "Create a pull request for this feature"
+You: "Developer A pushed UserService. Pull the latest and check if
+     I can start Step 1 now."
 
-Claude: [Creates PR with summary of all changes]
-        "PR #42 created: Add User Profile feature
-         - 8 tasks completed
-         - 47 tests added
-         - 12 new files"
+Claude: [Runs git fetch && git merge origin/feature/user-profile --no-edit]
+        "Merged Developer A's changes. UserService is now available in
+         Core/Services/. You can proceed with Step 1."
+
+You: "Implement Step 1 now using the real UserService"
+
+Claude: [Creates SettingsViewModel using UserService]
+        [Writes unit tests with MockUserService]
+
+You: "Update the task file to mark Step 1 complete"
+
+Claude: [Updates task file, notes the unblocking]
+```
+
+---
+
+### Shared Code Coordination Scenario
+
+**Developer B discovers they need a new utility:**
+
+```
+You: "I need a DateFormatter extension for displaying 'Last synced' time.
+     Before creating it, check if Developer A has something similar or
+     if there's an existing utility in Core/."
+
+Claude: [Searches Core/Extensions/ and Features/Profile/]
+        "I found that Developer A created Date+Formatting.swift in
+         Core/Extensions/ with a relativeTimeString() method. You can
+         use that instead of creating a new one."
+
+You: "Perfect, use that existing extension"
+
+Claude: [Uses existing Date+Formatting extension]
+```
+
+**If no existing utility:**
+
+```
+You: "I need a validation helper for email. Check Core/ first."
+
+Claude: [Searches - nothing found]
+        "No existing email validation found. Should I:
+         1. Create it in Features/Settings/ (feature-specific)
+         2. Create it in Core/Extensions/ (shared)
+
+         Since Developer A might need email validation too, I recommend
+         option 2."
+
+You: "Create it in Core/Extensions/ and update CLAUDE.md"
+
+Claude: [Creates Core/Extensions/String+Validation.swift]
+        [Updates CLAUDE.md to document new utility]
+
+You: "Commit with a clear message so Developer A knows"
+
+Claude: [Commits: "Add email validation extension to Core/
+
+         Added String+Validation.swift with isValidEmail property.
+         Developer A: Feel free to use this in Profile feature."]
+```
+
+---
+
+### Integration: Both Features Ready
+
+**Developer A finishes and merges first:**
+
+```
+You: "All my tasks are done. Pull latest develop and run all tests"
+
+Claude: [Pulls, runs tests]
+        "All 34 tests pass. No conflicts with develop."
+
+You: "Create a PR for the Profile feature"
+
+Claude: [Creates PR #42: "Add User Profile feature"]
+```
+
+**Developer B integrates after:**
+
+```
+You: "Developer A's Profile feature is merged to develop. Pull it
+     and make sure Settings still works."
+
+Claude: [Pulls from develop]
+        [Runs all tests]
+        "Settings tests pass. However, I notice Developer A modified
+         UserService to add an avatarURL field. Your SettingsViewModel
+         should handle this gracefully."
+
+You: "Update SettingsViewModel to work with the new UserService"
+
+Claude: [Updates SettingsViewModel]
+        [All tests pass]
+
+You: "Create PR for Settings feature"
+
+Claude: [Creates PR #43: "Add App Settings feature"]
+```
+
+---
+
+### Final State
+
+**docs/ directory after both features:**
+```
+docs/
+├── PRD.md
+├── ARCHITECTURE.md
+├── specs/
+│   ├── user-profile.md      (Developer A)
+│   └── settings.md          (Developer B)
+└── tasks/
+    ├── user-profile-tasks.md (Complete)
+    └── settings-tasks.md     (Complete)
+```
+
+**Features/ directory:**
+```
+Features/
+├── Profile/                  (Developer A)
+│   ├── Views/
+│   │   └── ProfileView.swift
+│   └── ViewModels/
+│       └── ProfileViewModel.swift
+└── Settings/                 (Developer B)
+    ├── Views/
+    │   ├── SettingsView.swift
+    │   └── NotificationSettingsView.swift
+    └── ViewModels/
+        └── SettingsViewModel.swift
+```
+
+**Core/ (shared, coordinated):**
+```
+Core/
+├── Services/
+│   ├── UserService.swift         (Created by Developer A)
+│   ├── UserAPIService.swift      (Created by Developer A)
+│   └── MockUserService.swift     (Created by Developer A)
+└── Extensions/
+    ├── Date+Formatting.swift     (Created by Developer A)
+    └── String+Validation.swift   (Created by Developer B)
 ```
 
 ---
@@ -1032,15 +1160,24 @@ Claude: [Creates PR with summary of all changes]
 - [ ] Test with `/build`
 - [ ] Verify XcodeBuildMCP works
 
-### Starting a New Feature (Together)
+### Starting Your Own Feature
 
-- [ ] Discuss feature requirements
-- [ ] One developer creates PRD/spec in Plan Mode
-- [ ] Create task breakdown with ownership
-- [ ] Divide tasks by module/layer
-- [ ] Work in parallel on separate branches
-- [ ] Sync and integrate regularly
-- [ ] Review together before merge
+- [ ] Create your feature branch from develop
+- [ ] Tell Claude about your feature and your teammate's off-limits directories
+- [ ] Create your spec in `docs/specs/`
+- [ ] Create your task file in `docs/tasks/`
+- [ ] Update CLAUDE.md with your active feature info
+- [ ] Identify shared code needs and coordinate with teammate
+- [ ] Work independently in your feature directory
+- [ ] Pull from develop regularly
+- [ ] Create PR when complete
+
+### Coordination Points (Both Developers)
+
+- [ ] Weekly sync: Discuss upcoming shared code needs
+- [ ] Before touching Core/: Message your teammate
+- [ ] After adding shared code: Update CLAUDE.md and commit
+- [ ] Before PR: Pull develop, run all tests, check for conflicts
 
 ---
 
